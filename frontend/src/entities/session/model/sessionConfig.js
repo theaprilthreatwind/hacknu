@@ -1,0 +1,17 @@
+export const defaultSessionConfig = {
+  apiBaseUrl: "",
+  authPath: "/api/login",
+  registerPath: "/api/register",
+  authMode: "register",
+  authIdentifierField: "email",
+  authPasswordField: "password",
+  authNameField: "name",
+  authTokenPath: "token",
+  authUserNamePath: "user.name",
+  login: "",
+  token: "",
+  roomId: "hacknu-live-room",
+  name: "",
+  sessionGoal: "Brainstorm with an AI teammate on the canvas.",
+  persona: "strategist",
+};
