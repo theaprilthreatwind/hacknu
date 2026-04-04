@@ -11,6 +11,7 @@ class RoomResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'share_uuid' => $this->share_uuid,
             'project_id' => $this->project_id,
             'name' => $this->name,
             'status' => $this->status,

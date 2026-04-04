@@ -18,6 +18,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('projects', ProjectController::class);
     Route::apiResource('rooms', RoomController::class);
+    Route::get('/rooms/join/{uuid}', [RoomController::class, 'joinByUuid']);
     Route::post('/rooms/{room}/canvas_state', [RoomController::class, 'saveCanvas']);
     Route::get('/rooms/{room}/video-token', [RoomController::class, 'generateVideoToken']);
     Route::post('/rooms/{room}/ai/chat', [AIController::class, 'chat']);

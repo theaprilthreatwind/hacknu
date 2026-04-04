@@ -17,7 +17,15 @@ class Room extends Model
         'started_at',
         'ended_at',
         'canvas_state',
+        'share_uuid',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (Room $room) {
+            $room->share_uuid = (string) \Illuminate\Support\Str::uuid();
+        });
+    }
 
     protected function casts(): array
     {

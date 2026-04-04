@@ -104,4 +104,10 @@ class RoomController extends Controller
             'livekit_url' => env('LIVEKIT_URL'),
         ]);
     }
+
+    public function joinByUuid(Request $request, $uuid)
+    {
+        $room = Room::where('share_uuid', $uuid)->firstOrFail();
+        return response()->json(['data' => $room]);
+    }
 }
