@@ -1,8 +1,8 @@
-import { Canva } from "../widget/workspace";
+import { Canva } from "../widgets/Canva";
 
 export function WorkSpace() {
   return (
-    <div className="w-screen h-screen">
+    <div>
       <Canva />
     </div>
   );
