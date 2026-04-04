@@ -110,3 +110,10 @@ export const fetchGenerationStatus = ({
     )}`,
     token,
   });
+
+export const joinRoomByUuid = ({ apiBaseUrl, token, shareUuid }) =>
+  apiRequest({
+    apiBaseUrl,
+    path: `/api/rooms/join/${encodeURIComponent(shareUuid)}`,
+    token,
+  });

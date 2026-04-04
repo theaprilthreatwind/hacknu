@@ -2,7 +2,9 @@ import { useState } from "react";
 import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import { defaultSessionConfig } from "../entities/session";
 import { AuthPage } from "../pages/auth";
-import { ProjectHubPage, WorkspacePlaceholderPage } from "../pages/workspace";
+import { WorkspacePage } from "../pages/workspace/ui/WorkspacePage";
+import { ProjectHubPage } from "../pages/workspace/ui/ProjectHubPage";
+import { WorkspacePlaceholderPage } from "../pages/workspace/ui/WorkspacePlaceholderPage";
 import { getStoredSessionConfig, saveSessionConfig } from "../shared/lib/storage";
 
 const App = () => {
@@ -61,20 +63,17 @@ const App = () => {
         path="/hub"
         element={
           sessionConfig.token ? (
-            <ProjectHubPage
-              sessionConfig={sessionConfig}
-              onResetSession={handleSessionReset}
-            />
+            <ProjectHubPage onResetSession={handleSessionReset} />
           ) : (
             <Navigate to="/" replace />
           )
         }
       />
       <Route
-        path="/workspace"
+        path="/room/:id"
         element={
           sessionConfig.token ? (
-            <WorkspacePlaceholderPage />
+            <WorkspacePage sessionConfig={sessionConfig} />
           ) : (
             <Navigate to="/" replace />
           )
