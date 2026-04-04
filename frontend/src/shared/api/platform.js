@@ -66,7 +66,7 @@ export const fetchVideoToken = ({ apiBaseUrl, token, roomId }) =>
     token,
   });
 
-export const chatWithRoomAi = ({ apiBaseUrl, token, roomId, prompt }) =>
+export const chatWithRoomAi = ({ apiBaseUrl, token, roomId, prompt, canvas_state = [] }) =>
   apiRequest({
     apiBaseUrl,
     path: `/api/rooms/${encodeURIComponent(roomId)}/ai/chat`,
@@ -74,6 +74,7 @@ export const chatWithRoomAi = ({ apiBaseUrl, token, roomId, prompt }) =>
     token,
     body: {
       prompt,
+      canvas_state,
     },
   });
 
@@ -116,4 +117,15 @@ export const joinRoomByUuid = ({ apiBaseUrl, token, shareUuid }) =>
     apiBaseUrl,
     path: `/api/rooms/join/${encodeURIComponent(shareUuid)}`,
     token,
+  });
+
+export const updateRoomCanvasState = ({ apiBaseUrl, token, roomId, canvasState }) =>
+  apiRequest({
+    apiBaseUrl,
+    path: `/api/rooms/${encodeURIComponent(roomId)}/canvas_state`,
+    method: "POST",
+    token,
+    body: {
+      canvas_state: canvasState,
+    },
   });

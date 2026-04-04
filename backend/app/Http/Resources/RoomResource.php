@@ -15,6 +15,7 @@ class RoomResource extends JsonResource
             'project_id' => $this->project_id,
             'name' => $this->name,
             'status' => $this->status,
+            'canvas_state' => $this->canvas_state,
             'started_at' => $this->started_at,
             'ended_at' => $this->ended_at,
             'created_at' => $this->created_at,

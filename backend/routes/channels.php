@@ -8,11 +8,9 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
 });
 
 Broadcast::channel('room.{roomId}', function ($user, $roomId) {
-    $room = Room::find($roomId);
-
-    if ($room && $room->project->user_id === $user->id) {
-        return ['id' => $user->id, 'name' => $user->name];
-    }
-
-    return false;
+    // В рамках хакатона разрешаем доступ всем авторизованным пользователям
+    return [
+        'id' => $user->id,
+        'name' => $user->name ?? 'User ' . $user->id,
+    ];
 });

@@ -35,18 +35,18 @@ class RoomController extends Controller
 
     public function show(Request $request, Room $room)
     {
-        if ($room->project->user_id !== $request->user()->id) {
-            abort(403, 'Unauthorized action.');
-        }
+        // if ($room->project->user_id !== $request->user()->id) {
+        //     abort(403, 'Unauthorized action.');
+        // }
 
         return new RoomResource($room);
     }
 
     public function update(UpdateRoomRequest $request, Room $room)
     {
-        if ($room->project->user_id !== $request->user()->id) {
-            abort(403, 'Unauthorized action.');
-        }
+        // if ($room->project->user_id !== $request->user()->id) {
+        //     abort(403, 'Unauthorized action.');
+        // }
 
         $room->update($request->validated());
         return new RoomResource($room);
@@ -54,12 +54,12 @@ class RoomController extends Controller
 
     public function saveCanvas(Request $request, Room $room)
     {
-        if ($room->project->user_id !== $request->user()->id) {
-            abort(403, 'Unauthorized action.');
-        }
+        // if ($room->project->user_id !== $request->user()->id) {
+        //     abort(403, 'Unauthorized action.');
+        // }
 
         $validated = $request->validate([
-            'canvas_state' => 'present|array',
+            'canvas_state' => 'nullable|array',
         ]);
 
         $room->update([
@@ -71,9 +71,9 @@ class RoomController extends Controller
 
     public function destroy(Request $request, Room $room)
     {
-        if ($room->project->user_id !== $request->user()->id) {
-            abort(403, 'Unauthorized action.');
-        }
+        // if ($room->project->user_id !== $request->user()->id) {
+        //     abort(403, 'Unauthorized action.');
+        // }
 
         $room->delete();
         return response()->noContent();
@@ -81,9 +81,9 @@ class RoomController extends Controller
 
     public function generateVideoToken(Request $request, Room $room)
     {
-        if ($room->project->user_id !== $request->user()->id) {
-            abort(403, 'Unauthorized action.');
-        }
+        // if ($room->project->user_id !== $request->user()->id) {
+        //     abort(403, 'Unauthorized action.');
+        // }
 
         $payload = [
             'iss' => env('LIVEKIT_API_KEY'),
