@@ -105,3 +105,4 @@ JSON
   "livekit_url": "wss://ваш-проект.livekit.cloud"
 }
 Передайте эти token и livekit_url в LiveKit SDK для старта видеозвонка.
+
