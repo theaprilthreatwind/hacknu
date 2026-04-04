@@ -18,4 +18,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('projects', ProjectController::class);
     Route::apiResource('rooms', RoomController::class);
     Route::post('/rooms/{room}/canvas_state', [RoomController::class, 'saveCanvas']);
+    Route::get('/rooms/{room}/video-token', [RoomController::class, 'generateVideoToken']);
 });

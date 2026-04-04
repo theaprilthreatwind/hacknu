@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateRoomRequest;
 use App\Http\Resources\RoomResource;
 use App\Models\Project;
 use App\Models\Room;
+use Firebase\JWT\JWT;
 use Illuminate\Http\Request;
 
 class RoomController extends Controller
@@ -76,5 +77,31 @@ class RoomController extends Controller
 
         $room->delete();
         return response()->noContent();
+    }
+
+    public function generateVideoToken(Request $request, Room $room)
+    {
+        if ($room->project->user_id !== $request->user()->id) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $payload = [
+            'iss' => env('LIVEKIT_API_KEY'),
+            'nbf' => time(),
+            'exp' => time() + 7200,
+            'sub' => (string) $request->user()->id,
+            'video' => [
+                'roomJoin' => true,
+                'room' => (string) $room->id,
+            ],
+            'name' => $request->user()->name,
+        ];
+
+        $token = JWT::encode($payload, env('LIVEKIT_API_SECRET'), 'HS256');
+
+        return response()->json([
+            'token' => $token,
+            'livekit_url' => env('LIVEKIT_URL'),
+        ]);
     }
 }
