@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { applyNodeChanges, applyEdgeChanges, addEdge } from '@xyflow/react';
 import { Canva } from "../../../widgets/Canva";
 import { FloatingAICommand } from "../../../widgets/floating-ai-command";
@@ -107,7 +107,7 @@ const TopToolbar = ({ activeTool, onToolSelect }) => (
 
 // ─── Main page ────────────────────────────────────────────────────
 export const WorkspacePage = ({ sessionConfig }) => {
-  const { id: roomId } = useParams();
+  const { roomId } = useParams();
   const guestId = useMemo(() => Math.random().toString(36).substring(7), []);
 
   const [nodes, setNodes] = useState([]);
@@ -252,18 +252,7 @@ export const WorkspacePage = ({ sessionConfig }) => {
     return () => connection.disconnect();
   }, [roomId, isHydrated, sessionConfig]);
 
-  // 2. Debounced canvas auto-save
-  useEffect(() => {
-    if (!isHydrated || !roomId || nodes.length === 0) return;
-
-    const timeoutId = setTimeout(() => {
-      handleSaveCanvas(nodes, edges);
-    }, 1500);
-
-    return () => clearTimeout(timeoutId);
-  }, [nodes, edges, roomId, isHydrated]);
-
-  const handleSaveCanvas = async (currentNodes, currentEdges) => {
+  const handleSaveCanvas = useCallback(async (currentNodes, currentEdges) => {
     try {
       const result = await apiSaveCanvasState({
         apiBaseUrl: sessionConfig?.apiBaseUrl,
@@ -279,7 +268,18 @@ export const WorkspacePage = ({ sessionConfig }) => {
     } catch (error) {
       console.error('Failed to save canvas state:', error);
     }
-  };
+  }, [roomId, sessionConfig?.apiBaseUrl, sessionConfig?.token]);
+
+  // 2. Debounced canvas auto-save
+  useEffect(() => {
+    if (!isHydrated || !roomId || nodes.length === 0) return;
+
+    const timeoutId = setTimeout(() => {
+      handleSaveCanvas(nodes, edges);
+    }, 1500);
+
+    return () => clearTimeout(timeoutId);
+  }, [nodes, edges, roomId, isHydrated, handleSaveCanvas]);
 
   // 3. AI submit handler
   const handleAiSubmit = async (prompt) => {
@@ -369,6 +369,15 @@ export const WorkspacePage = ({ sessionConfig }) => {
               Live · {Object.keys(remoteCursors).length + 1} online
             </span>
           </div>
+          <Link
+            to="/hub"
+            className="w-full flex items-center justify-center gap-2 bg-h_accent/10 hover:bg-h_accent/20 border border-h_accent/30 text-h_accent py-2 px-4 rounded-xl text-xs font-semibold transition-all"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+            Вернуться в дашборд
+          </Link>
           <button className="w-full flex items-center justify-center gap-2 bg-h_accent/10 hover:bg-h_accent/20 border border-h_accent/30 text-h_accent py-2 px-4 rounded-xl text-xs font-semibold transition-all">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>

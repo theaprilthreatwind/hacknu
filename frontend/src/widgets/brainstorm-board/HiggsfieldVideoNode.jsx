@@ -18,6 +18,11 @@ export function HiggsfieldVideoNode({ id, data, selected }) {
   const { status = 'waiting', prompt, url, videoUrl } = data;
   const resolvedUrl = url || videoUrl;
   const [stylePrompt, setStylePrompt] = useState(data.prompt || '');
+  const apiBaseUrl = data.apiBaseUrl || 'http://127.0.0.1:8000/api';
+  const token = data.token || '';
+  const roomId = data.roomId || 1;
+  const finalPrompt = data.finalPrompt || data.prompt || 'Cinematic B-roll';
+  const imageUrl = data.imageUrl || null;
 
   // ── Fire generation only when status flips to 'loading' ──────────
   useEffect(() => {
@@ -28,11 +33,11 @@ export function HiggsfieldVideoNode({ id, data, selected }) {
     const fetchVideo = async () => {
       try {
         const result = await generateHiggsfieldVideo({
-          apiBaseUrl: data.apiBaseUrl || 'http://127.0.0.1:8000/api',
-          token:      data.token      || '',
-          roomId:     data.roomId     || 1,
-          prompt:     data.finalPrompt || data.prompt || 'Cinematic B-roll',
-          imageUrl:   data.imageUrl   || null,
+          apiBaseUrl,
+          token,
+          roomId,
+          prompt: finalPrompt,
+          imageUrl,
         });
 
         if (isMounted) {
@@ -59,7 +64,7 @@ export function HiggsfieldVideoNode({ id, data, selected }) {
 
     fetchVideo();
     return () => { isMounted = false; };
-  }, [status, id, setNodes]); // only re-runs if status changes to 'loading'
+  }, [status, id, setNodes, apiBaseUrl, token, roomId, finalPrompt, imageUrl]); // only re-runs if status changes to 'loading'
 
   return (
     <div

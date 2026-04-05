@@ -4,8 +4,6 @@ import {
   Controls,
   Position,
   Handle,
-  applyNodeChanges,
-  applyEdgeChanges,
   ReactFlowProvider,
   useReactFlow,
   useViewport,
@@ -166,10 +164,28 @@ const FlowWrapper = ({
     [activeTool, setActiveTool, setNodes, screenToFlowPosition, roomId, token, apiBaseUrl]
   );
 
+  const handleWrapperClickCapture = useCallback(
+    (event) => {
+      const target = event.target;
+
+      if (!(target instanceof HTMLElement)) {
+        return;
+      }
+
+      if (!target.closest(".react-flow__pane")) {
+        return;
+      }
+
+      handlePaneClick(event);
+    },
+    [handlePaneClick],
+  );
+
   return (
     <div
       className={`w-full h-full ${activeTool && activeTool !== 'select' ? 'cursor-crosshair' : 'cursor-default'}`}
       onPointerMove={handlePointerMove}
+      onClickCapture={handleWrapperClickCapture}
     >
       {children(handlePaneClick)}
     </div>
@@ -227,7 +243,6 @@ export function Canva({
   setNodes,
   onNodesChange,
   edges,
-  setEdges,
   onEdgesChange,
   onConnect,
   remoteCursors,

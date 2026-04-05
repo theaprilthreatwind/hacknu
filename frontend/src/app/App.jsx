@@ -4,7 +4,6 @@ import { defaultSessionConfig } from "../entities/session";
 import { AuthPage } from "../pages/auth";
 import { WorkspacePage } from "../pages/workspace/ui/WorkspacePage";
 import { ProjectHubPage } from "../pages/workspace/ui/ProjectHubPage";
-import { WorkspacePlaceholderPage } from "../pages/workspace/ui/WorkspacePlaceholderPage";
 import { getStoredSessionConfig, saveSessionConfig } from "../shared/lib/storage";
 
 const App = () => {
@@ -63,14 +62,17 @@ const App = () => {
         path="/hub"
         element={
           sessionConfig.token ? (
-            <ProjectHubPage onResetSession={handleSessionReset} />
+            <ProjectHubPage
+              sessionConfig={sessionConfig}
+              onResetSession={handleSessionReset}
+            />
           ) : (
             <Navigate to="/" replace />
           )
         }
       />
       <Route
-        path="/room/:id"
+        path="/workspace/:roomId"
         element={
           sessionConfig.token ? (
             <WorkspacePage sessionConfig={sessionConfig} />
@@ -78,6 +80,10 @@ const App = () => {
             <Navigate to="/" replace />
           )
         }
+      />
+      <Route
+        path="/room/:id"
+        element={<Navigate to="/hub" replace />}
       />
       <Route
         path="*"
