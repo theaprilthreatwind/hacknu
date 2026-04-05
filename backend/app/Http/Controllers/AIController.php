@@ -17,7 +17,14 @@ class AIController extends Controller
             'canvas_state' => 'nullable|array',
         ]);
 
-        $room = Room::where('share_uuid', $uuidOrId)->orWhere('id', $uuidOrId)->firstOrFail();
+        $query = Room::query();
+        if (is_numeric($uuidOrId)) {
+            $query->where('id', $uuidOrId);
+        } else {
+            $query->where('share_uuid', $uuidOrId);
+        }
+        $room = $query->firstOrFail();
+
         $canvasState = json_encode($request->input('canvas_state', $room->canvas_state ?? []));
 
         $systemPrompt = "Ты — ИИ-ассистент, являющийся 'пространственным участником' (spatial participant) на бесконечной визуальной доске.
@@ -102,6 +109,15 @@ class AIController extends Controller
             'image_url' => 'required_if:type,video|string',
         ]);
 
+        $query = Room::query();
+        if (is_numeric($uuidOrId)) {
+            $query->where('id', $uuidOrId);
+        } else {
+            $query->where('share_uuid', $uuidOrId);
+        }
+        $room = $query->firstOrFail();
+
+
         $id = env('HIGGSFIELD_API_KEY_ID');
         $secret = env('HIGGSFIELD_API_KEY_SECRET');
 
@@ -138,6 +154,15 @@ class AIController extends Controller
     {
         $id = env('HIGGSFIELD_API_KEY_ID');
         $secret = env('HIGGSFIELD_API_KEY_SECRET');
+
+        $query = Room::query();
+        if (is_numeric($uuidOrId)) {
+            $query->where('id', $uuidOrId);
+        } else {
+            $query->where('share_uuid', $uuidOrId);
+        }
+        $room = $query->firstOrFail();
+
 
         try {
             $response = Http::withHeaders([

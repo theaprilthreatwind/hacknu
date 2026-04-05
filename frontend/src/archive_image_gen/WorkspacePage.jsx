@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { applyNodeChanges, applyEdgeChanges, addEdge } from '@xyflow/react';
 import { Canva } from "../../../widgets/Canva";
 import { FloatingAICommand } from "../../../widgets/floating-ai-command";
-import { generateRoomMedia, fetchRoom, fetchGenerationStatus, chatWithRoomAi } from "../../../shared/api/platform";
+import { generateRoomMedia, fetchRoom, fetchGenerationStatus } from "../../../shared/api/platform";
 import { generateHiggsfieldVideo } from "../../../shared/api/media";
 import { saveCanvasState as apiSaveCanvasState } from "../../../shared/api/canvas";
 import { createRoomConnection } from "../../../shared/api/realtime";
@@ -345,7 +345,7 @@ export const WorkspacePage = ({ sessionConfig }) => {
       const response = await chatWithRoomAi({
         apiBaseUrl: sessionConfig?.apiBaseUrl,
         token: sessionConfig?.token,
-        roomId: roomData?.share_uuid || roomId,
+        roomId,
         prompt,
         canvas_state: nodes,
       });
