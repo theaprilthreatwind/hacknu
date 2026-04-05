@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+@theme {
+  /* ── Layout backgrounds ── */
+  --color-h_black: #000000;
+  --color-h_dark:  #0A0A0A;
+
+  /* ── Strict 5-color brand palette ── */
+  --color-h_bg_main:        #131313;
+  --color-h_bg_card:        #1a1a1a;
+  --color-h_accent:         #d1fe17;
+  --color-h_text_primary:   #fefefe;
+  --color-h_text_secondary: #7b7b7b;
+}
