@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { applyNodeChanges, applyEdgeChanges, addEdge } from '@xyflow/react';
 import { Canva } from "../../../widgets/Canva";
 import { FloatingAICommand } from "../../../widgets/floating-ai-command";
-import { chatWithRoomAi, fetchRoom } from "../../../shared/api/platform";
+import { generateRoomMedia, fetchRoom, fetchGenerationStatus } from "../../../shared/api/platform";
+import { generateHiggsfieldVideo } from "../../../shared/api/media";
 import { saveCanvasState as apiSaveCanvasState } from "../../../shared/api/canvas";
 import { createRoomConnection } from "../../../shared/api/realtime";
+import { LiveVoiceWidget } from "../../../widgets/live-voice/LiveVoiceWidget";
 
 // ─── Tool definitions ─────────────────────────────────────────────
 const TOOLS = [
@@ -71,7 +73,7 @@ const TOOLS = [
 
 // ─── Figma-style top toolbar ──────────────────────────────────────
 const TopToolbar = ({ activeTool, onToolSelect }) => (
-  <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-0.5 px-2 py-1.5 rounded-2xl bg-h_bg_card border border-[#2a2a2a] shadow-[0_8px_32px_rgba(0,0,0,0.7)] backdrop-blur-xl">
+  <div className="flex items-center gap-2 px-4 py-2 bg-neutral-900/90 backdrop-blur-md border border-neutral-800 rounded-2xl shadow-xl">
     {TOOLS.map((tool) => {
       if (tool.id === 'divider') {
         return <div key="divider" className="w-px h-6 bg-[#2a2a2a] mx-1.5" />;
@@ -84,20 +86,20 @@ const TopToolbar = ({ activeTool, onToolSelect }) => (
           title={tool.label}
           onClick={() => onToolSelect(tool.id)}
           className={[
-            'relative flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all duration-150',
+            'relative flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-all duration-150',
             isActive
-              ? 'bg-h_accent/15 text-h_accent shadow-[0_0_12px_rgba(209,254,23,0.2)]'
+              ? 'bg-h_accent/10 text-h_accent shadow-[0_0_12px_rgba(209,254,23,0.1)]'
               : isAccent
               ? 'text-h_accent/70 hover:text-h_accent hover:bg-h_accent/10'
-              : 'text-h_text_secondary hover:text-h_text_primary hover:bg-white/5',
+              : 'text-neutral-400 hover:text-white hover:bg-white/5',
           ].join(' ')}
         >
           {tool.icon}
-          <span className="text-[9px] font-medium tracking-wide opacity-70 leading-none">
+          <span className="text-[10px] font-medium tracking-wide leading-none mt-0.5">
             {tool.label}
           </span>
           {isActive && (
-            <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-h_accent" />
+            <span className="absolute bottom-0 w-1 h-1 rounded-full bg-h_accent" />
           )}
         </button>
       );
@@ -108,6 +110,7 @@ const TopToolbar = ({ activeTool, onToolSelect }) => (
 // ─── Main page ────────────────────────────────────────────────────
 export const WorkspacePage = ({ sessionConfig }) => {
   const { id: roomId } = useParams();
+  const navigate = useNavigate();
   const guestId = useMemo(() => Math.random().toString(36).substring(7), []);
 
   const [nodes, setNodes] = useState([]);
@@ -115,6 +118,8 @@ export const WorkspacePage = ({ sessionConfig }) => {
   const [isAiGenerating, setIsAiGenerating] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
   const [activeTool, setActiveTool] = useState('select');
+  const [roomData, setRoomData] = useState(null);
+  const [isCopied, setIsCopied] = useState(false);
 
   const [remoteCursors, setRemoteCursors] = useState({});
   const connectionRef = useRef(null);
@@ -129,60 +134,109 @@ export const WorkspacePage = ({ sessionConfig }) => {
     []
   );
 
+  // ── Video Generation Logic (Step 1: Start, Step 2: Polling) ──────
+  const startVideoGeneration = async (roomId, prompt, imageUrl, targetNodeId) => {
+    const apiBaseUrl = sessionConfig?.apiBaseUrl || 'http://127.0.0.1:8000';
+    const token = sessionConfig?.token;
+
+    try {
+      console.log("Шаг 1: Запуск генерации (через platform API)...");
+      const startData = await generateRoomMedia({
+        apiBaseUrl,
+        token,
+        roomId,
+        prompt,
+        type: 'video',
+        imageUrl
+      });
+
+      const requestId = startData.request_id || startData.payload?.request_id;
+      if (!requestId) throw new Error("No request_id returned from Higgsfield");
+
+      console.log("Шаг 2: Начинаем Polling для request_id:", requestId);
+      
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusData = await fetchGenerationStatus({
+            apiBaseUrl,
+            token,
+            roomId,
+            requestId
+          });
+          
+          const status = statusData.status || statusData.payload?.status;
+
+          if (status === 'completed') {
+            clearInterval(pollInterval);
+            const videoUrl = statusData.video?.url || statusData.payload?.video?.url;
+            console.log("Видео готово! Ссылка:", videoUrl);
+            
+            setNodes((nds) => nds.map((n) => n.id === targetNodeId ? { 
+              ...n, 
+              type: 'higgsfieldVideo', 
+              data: { ...n.data, video_url: videoUrl, isGeneratingMedia: false } 
+            } : n));
+          } else if (status === 'failed' || status === 'nsfw') {
+            clearInterval(pollInterval);
+            console.error("Ошибка генерации Higgsfield:", status);
+            setNodes((nds) => nds.map((n) => n.id === targetNodeId ? { ...n, data: { ...n.data, isGeneratingMedia: false } } : n));
+          } else {
+            console.log("Генерация в процессе. Полный ответ:", statusData);
+          }
+        } catch (pollErr) {
+          console.error("Ошибка при поллинге:", pollErr);
+        }
+      }, 4000);
+
+    } catch (error) {
+      console.error("Ошибка при старте генерации:", error);
+      setNodes((nds) => nds.map((n) => n.id === targetNodeId ? { ...n, data: { ...n.data, isGeneratingMedia: false } } : n));
+    }
+  };
+
   // onConnect: wires nodes + triggers Image-to-Video pipeline
   const onConnect = useCallback(
-    (params) => {
+    async (params) => {
+      const sourceNode = nodes.find((n) => n.id === params.source);
+      const targetNode = nodes.find((n) => n.id === params.target);
+
+      console.log("ONCONNECT TRIGGERED. Source:", sourceNode?.type, "Target:", targetNode?.type);
+
+      // Ищем ссылку на картинку в любых возможных полях
+      const imageUrl = sourceNode?.data?.image_url || sourceNode?.data?.url || sourceNode?.data?.image;
+
+      // Если есть картинка и есть куда её воткнуть - запускаем!
+      if (imageUrl && targetNode) {
+        console.log("Железобетонное условие выполнено! Запускаем Image-to-Video...");
+        
+        // 1. Рисуем стрелку
+        setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: '#d1fe17', strokeWidth: 1.5 } }, eds));
+        
+        // 2. Сразу меняем статус Target ноды на загрузку
+        setNodes((nds) => nds.map(n => n.id === targetNode.id ? { 
+          ...n, 
+          data: { ...n.data, isGeneratingMedia: true, status: 'generating' } 
+        } : n));
+        
+        // 3. Вызываем функцию генерации
+        startVideoGeneration(
+          roomId, 
+          targetNode.data?.content || targetNode.data?.prompt || "Animate this", 
+          imageUrl, 
+          targetNode.id
+        );
+        return; 
+      }
+
+      // Fallback for regular connections
       setEdges((eds) =>
         addEdge(
           { ...params, animated: true, style: { stroke: '#d1fe17', strokeWidth: 1.5 } },
           eds
         )
       );
-
-      // Image-to-Video: if source is any image node → target is video node
-      setNodes((nds) => {
-        const sourceNode = nds.find((n) => n.id === params.source);
-        const targetNode = nds.find((n) => n.id === params.target);
-
-        if (
-          sourceNode?.type?.startsWith('image') &&
-          targetNode?.type === 'higgsfieldVideo' &&
-          targetNode.data.status === 'waiting'
-        ) {
-          const imagePrompt = sourceNode.data.prompt || '';
-          const videoStylePrompt = targetNode.data.prompt || '';
-          const imageUrl = sourceNode.data.url || null;
-
-          return nds.map((node) =>
-            node.id === params.target
-              ? {
-                  ...node,
-                  data: {
-                    ...node.data,
-                    status: 'loading',
-                    imageUrl,
-                    finalPrompt: imagePrompt && videoStylePrompt
-                      ? `${imagePrompt} with ${videoStylePrompt}`
-                      : imagePrompt || videoStylePrompt || 'Cinematic B-roll',
-                  },
-                }
-              : node
-          );
-        }
-
-        // Generic: also flip any video node from waiting → loading
-        if (targetNode?.type === 'higgsfieldVideo' && targetNode.data.status === 'waiting') {
-          return nds.map((node) =>
-            node.id === params.target
-              ? { ...node, data: { ...node.data, status: 'loading' } }
-              : node
-          );
-        }
-
-        return nds;
-      });
     },
-    [setEdges, setNodes]
+    [nodes, setNodes, setEdges, sessionConfig, roomId]
   );
 
   // 1. Load room on mount
@@ -204,6 +258,7 @@ export const WorkspacePage = ({ sessionConfig }) => {
           response?.data ||
           response;
         console.log('[DEBUG] Room load response:', payload);
+        setRoomData(payload);
 
         const state =
           typeof payload.canvas_state === 'string'
@@ -299,6 +354,12 @@ export const WorkspacePage = ({ sessionConfig }) => {
       const aiData = response?.payload || response?.data || response;
       console.log('3. AI data extracted:', aiData);
 
+      // Защита от спама при ошибках API (особенно 429 Too Many Requests)
+      if (aiData?.status === "error" || response?.status === 429) {
+        alert(`Google AI просит подождать: превышен лимит запросов. Сделайте паузу на 1 минуту!`);
+        return; // Прерываем выполнение, чтобы не сломать стейт
+      }
+
       if (aiData && Array.isArray(aiData.new_nodes) && aiData.new_nodes.length > 0) {
         console.log('4. Adding nodes:', aiData.new_nodes);
 
@@ -328,11 +389,20 @@ export const WorkspacePage = ({ sessionConfig }) => {
     }
   };
 
+  // ── Share link ──────────────────────────────────────────────────
+  const handleShareClick = useCallback(() => {
+    const url = `${window.location.origin}/room/${roomId}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    });
+  }, [roomId]);
+
   return (
     <div className="flex h-screen w-screen bg-h_black overflow-hidden font-sans text-h_text_primary">
 
       {/* ── LEFT SIDEBAR ── */}
-      <aside className="w-60 flex-shrink-0 bg-h_bg_card border-r border-[#2a2a2a] flex flex-col z-10">
+      <aside className="w-60 flex-shrink-0 bg-h_bg_card border-r border-[#2a2a2a] flex flex-col z-40">
         {/* Brand */}
         <div className="px-5 py-4 border-b border-[#2a2a2a]">
           <div className="flex items-center gap-2.5">
@@ -349,6 +419,18 @@ export const WorkspacePage = ({ sessionConfig }) => {
 
         {/* Nav */}
         <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+
+          {/* Back to Dashboard */}
+          <button
+            onClick={() => navigate('/hub')}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-h_text_secondary hover:text-white hover:bg-white/5 rounded-lg transition-colors mb-4"
+          >
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to Dashboard
+          </button>
+
           <p className="text-[10px] font-semibold text-h_text_secondary uppercase tracking-widest px-2 mb-2">
             Boards
           </p>
@@ -369,13 +451,31 @@ export const WorkspacePage = ({ sessionConfig }) => {
               Live · {Object.keys(remoteCursors).length + 1} online
             </span>
           </div>
-          <button className="w-full flex items-center justify-center gap-2 bg-h_accent/10 hover:bg-h_accent/20 border border-h_accent/30 text-h_accent py-2 px-4 rounded-xl text-xs font-semibold transition-all">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
-              <polyline points="16 6 12 2 8 6"/>
-              <line x1="12" y1="2" x2="12" y2="15"/>
-            </svg>
-            Share link
+          <button
+            onClick={handleShareClick}
+            className={`w-full flex items-center justify-center gap-2 border py-2 px-4 rounded-xl text-xs font-semibold transition-all ${
+              isCopied 
+                ? 'bg-h_accent/20 border-h_accent text-h_accent' 
+                : 'bg-h_accent/10 hover:bg-h_accent/20 border-h_accent/30 text-h_accent'
+            }`}
+          >
+            {isCopied ? (
+              <>
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                </svg>
+                Copied!
+              </>
+            ) : (
+              <>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                  <polyline points="16 6 12 2 8 6"/>
+                  <line x1="12" y1="2" x2="12" y2="15"/>
+                </svg>
+                Share link
+              </>
+            )}
           </button>
         </div>
       </aside>
@@ -383,11 +483,8 @@ export const WorkspacePage = ({ sessionConfig }) => {
       {/* ── MAIN CANVAS AREA ── */}
       <main className="flex-1 relative bg-h_bg_main overflow-hidden">
 
-        {/* Figma-style top toolbar */}
-        <TopToolbar activeTool={activeTool} onToolSelect={setActiveTool} />
-
         {/* React Flow canvas */}
-        <div className="absolute inset-0">
+        <div className="absolute inset-0 z-0">
           <Canva
             nodes={nodes}
             setNodes={setNodes}
@@ -408,6 +505,11 @@ export const WorkspacePage = ({ sessionConfig }) => {
           />
         </div>
 
+        {/* Figma-style top toolbar - Ensure high z-index and render last in main to be on top */}
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[100]">
+          <TopToolbar activeTool={activeTool} onToolSelect={setActiveTool} />
+        </div>
+
         {/* Floating AI prompt bar */}
         <FloatingAICommand
           onCommandSubmit={handleAiSubmit}
@@ -415,22 +517,12 @@ export const WorkspacePage = ({ sessionConfig }) => {
         />
 
         {/* Live voice widget */}
-        <div className="absolute bottom-6 left-6 w-64 bg-h_bg_card/90 backdrop-blur-md rounded-xl border border-[#2a2a2a] overflow-hidden shadow-2xl pointer-events-none z-20">
-          <div className="px-4 py-2.5 border-b border-[#2a2a2a] flex items-center justify-between">
-            <span className="text-[10px] font-semibold text-h_text_secondary uppercase tracking-widest">
-              Live Voice
-            </span>
-            <div className="w-2 h-2 bg-h_accent rounded-full animate-pulse shadow-[0_0_8px_rgba(209,254,23,0.7)]"/>
-          </div>
-          <div className="px-4 py-3 flex items-center gap-2 text-h_text_secondary text-xs">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="flex-shrink-0">
-              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-              <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-              <line x1="12" y1="19" x2="12" y2="23"/>
-              <line x1="8" y1="23" x2="16" y2="23"/>
-            </svg>
-            Waiting for connection…
-          </div>
+        <div className="absolute bottom-6 left-6 z-50">
+          <LiveVoiceWidget
+            roomId={roomId}
+            apiBaseUrl={sessionConfig?.apiBaseUrl || 'http://127.0.0.1:8000/api'}
+            token={sessionConfig?.token}
+          />
         </div>
 
       </main>

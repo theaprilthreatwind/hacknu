@@ -63,7 +63,10 @@ const App = () => {
         path="/hub"
         element={
           sessionConfig.token ? (
-            <ProjectHubPage onResetSession={handleSessionReset} />
+            <ProjectHubPage
+              sessionConfig={sessionConfig}
+              onResetSession={handleSessionReset}
+            />
           ) : (
             <Navigate to="/" replace />
           )

@@ -22,9 +22,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('projects', ProjectController::class);
     Route::apiResource('rooms', RoomController::class);
     Route::get('/rooms/join/{uuid}', [RoomController::class, 'joinByUuid']);
-    Route::post('/rooms/{room}/canvas_state', [RoomController::class, 'saveCanvas']);
-    Route::get('/rooms/{room}/video-token', [RoomController::class, 'generateVideoToken']);
-    Route::post('/rooms/{room}/ai/chat', [AIController::class, 'chat']);
-    Route::post('/rooms/{room}/ai/generate', [AIController::class, 'generateMedia']);
-    Route::get('/rooms/{room}/ai/status/{requestId}', [AIController::class, 'checkMediaStatus']);
+    Route::post('/rooms/{roomId}/canvas_state', [RoomController::class, 'saveCanvas']);
+    Route::get('/rooms/{roomId}/video-token', [RoomController::class, 'generateVideoToken']);
+    Route::post('/rooms/{roomId}/ai/chat', [AIController::class, 'chat']);
+    Route::post('/rooms/{roomId}/ai/generate', [AIController::class, 'generateMedia']);
+    Route::get('/rooms/{roomId}/ai/status/{requestId}', [AIController::class, 'checkMediaStatus']);
 });

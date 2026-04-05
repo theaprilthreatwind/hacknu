@@ -8,15 +8,16 @@ use Illuminate\Support\Facades\Http;
 
 class AIController extends Controller
 {
-    public function chat(Request $request, Room $room)
+    public function chat(Request $request, $uuidOrId)
     {
         set_time_limit(120);
-        
+
         $request->validate([
             'prompt' => 'required|string',
             'canvas_state' => 'nullable|array',
         ]);
 
+        $room = Room::where('share_uuid', $uuidOrId)->orWhere('id', $uuidOrId)->firstOrFail();
         $canvasState = json_encode($request->input('canvas_state', $room->canvas_state ?? []));
 
         $systemPrompt = "Ты — ИИ-ассистент, являющийся 'пространственным участником' (spatial participant) на бесконечной визуальной доске.
@@ -93,7 +94,7 @@ class AIController extends Controller
         }
     }
 
-    public function generateMedia(Request $request, Room $room)
+    public function generateMedia(Request $request, $uuidOrId)
     {
         $request->validate([
             'prompt' => 'required|string',
@@ -133,7 +134,7 @@ class AIController extends Controller
         }
     }
 
-    public function checkMediaStatus(Request $request, Room $room, $requestId)
+    public function checkMediaStatus(Request $request, $uuidOrId, $requestId)
     {
         $id = env('HIGGSFIELD_API_KEY_ID');
         $secret = env('HIGGSFIELD_API_KEY_SECRET');

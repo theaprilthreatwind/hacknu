@@ -15,8 +15,8 @@ import { generateHiggsfieldVideo } from '../../shared/api/media';
  */
 export function HiggsfieldVideoNode({ id, data, selected }) {
   const { setNodes } = useReactFlow();
-  const { status = 'waiting', prompt, url, videoUrl } = data;
-  const resolvedUrl = url || videoUrl;
+  const { status = 'waiting', prompt, url, videoUrl, video_url } = data;
+  const resolvedUrl = url || videoUrl || video_url;
   const [stylePrompt, setStylePrompt] = useState(data.prompt || '');
 
   // ── Fire generation only when status flips to 'loading' ──────────

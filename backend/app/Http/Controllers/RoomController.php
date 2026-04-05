@@ -33,11 +33,15 @@ class RoomController extends Controller
         return new RoomResource($room);
     }
 
-    public function show(Request $request, Room $room)
+    public function show(Request $request, $uuidOrId)
     {
-        // if ($room->project->user_id !== $request->user()->id) {
-        //     abort(403, 'Unauthorized action.');
-        // }
+        $query = Room::query();
+        if (is_numeric($uuidOrId)) {
+            $query->where('id', $uuidOrId);
+        } else {
+            $query->where('share_uuid', $uuidOrId);
+        }
+        $room = $query->firstOrFail();
 
         return new RoomResource($room);
     }
@@ -52,11 +56,15 @@ class RoomController extends Controller
         return new RoomResource($room);
     }
 
-    public function saveCanvas(Request $request, Room $room)
+    public function saveCanvas(Request $request, $uuidOrId)
     {
-        // if ($room->project->user_id !== $request->user()->id) {
-        //     abort(403, 'Unauthorized action.');
-        // }
+        $query = Room::query();
+        if (is_numeric($uuidOrId)) {
+            $query->where('id', $uuidOrId);
+        } else {
+            $query->where('share_uuid', $uuidOrId);
+        }
+        $room = $query->firstOrFail();
 
         $validated = $request->validate([
             'canvas_state' => 'nullable|array',
@@ -66,7 +74,7 @@ class RoomController extends Controller
             'canvas_state' => $validated['canvas_state']
         ]);
 
-        return response()->json(['message' => 'Canvas state saved successfully'], 200);
+        return response()->json(['message' => 'Canvas state saved successfully', 'ok' => true], 200);
     }
 
     public function destroy(Request $request, Room $room)
@@ -79,30 +87,51 @@ class RoomController extends Controller
         return response()->noContent();
     }
 
-    public function generateVideoToken(Request $request, Room $room)
+    public function generateVideoToken(Request $request, $uuidOrId)
     {
-        // if ($room->project->user_id !== $request->user()->id) {
-        //     abort(403, 'Unauthorized action.');
-        // }
+        try {
+            $query = Room::query();
+            if (is_numeric($uuidOrId)) {
+                $query->where('id', $uuidOrId);
+            } else {
+                $query->where('share_uuid', $uuidOrId);
+            }
+            $room = $query->firstOrFail();
 
-        $payload = [
-            'iss' => env('LIVEKIT_API_KEY'),
-            'nbf' => time(),
-            'exp' => time() + 7200,
-            'sub' => (string) $request->user()->id,
-            'video' => [
-                'roomJoin' => true,
-                'room' => (string) $room->id,
-            ],
-            'name' => $request->user()->name,
-        ];
+            // Participant identity: user name or unique guest ID
+            $identity = $request->user() 
+                ? (string) $request->user()->id 
+                : 'guest_' . bin2hex(random_bytes(4));
 
-        $token = JWT::encode($payload, env('LIVEKIT_API_SECRET'), 'HS256');
+            $name = $request->user() 
+                ? $request->user()->name 
+                : 'Guest ' . rand(100, 999);
 
-        return response()->json([
-            'token' => $token,
-            'livekit_url' => env('LIVEKIT_URL'),
-        ]);
+            $payload = [
+                'iss' => env('LIVEKIT_API_KEY'),
+                'sub' => $identity,
+                'nbf' => time(),
+                'exp' => time() + 7200,
+                'video' => [
+                    'roomJoin' => true,
+                    'room'     => $room->share_uuid ?? (string) $room->id,
+                ],
+                'name' => $name,
+            ];
+
+            $token = JWT::encode($payload, env('LIVEKIT_API_SECRET'), 'HS256');
+
+            return response()->json([
+                'token'       => $token,
+                'livekit_url' => env('LIVEKIT_URL'),
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'error'   => 'Failed to generate video token',
+                'message' => $e->getMessage(),
+                'trace'   => $e->getTraceAsString(),
+            ], 500);
+        }
     }
 
     public function joinByUuid(Request $request, $uuid)
