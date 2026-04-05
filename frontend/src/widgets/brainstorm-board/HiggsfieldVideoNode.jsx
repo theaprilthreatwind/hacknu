@@ -30,6 +30,12 @@ export function HiggsfieldVideoNode({ id, data, selected }) {
     }
   }, [status]);
 
+  const apiBaseUrl = data.apiBaseUrl || 'http://127.0.0.1:8000/api';
+  const token = data.token || '';
+  const roomId = data.roomId || 1;
+  const finalPrompt = data.finalPrompt || data.prompt || 'Cinematic B-roll';
+  const imageUrl = data.imageUrl || null;
+
   // ── Fire generation only when status flips to 'loading' ──────────
   useEffect(() => {
     if (status !== 'loading') return;
@@ -39,11 +45,11 @@ export function HiggsfieldVideoNode({ id, data, selected }) {
     const fetchVideo = async () => {
       try {
         const result = await generateHiggsfieldVideo({
-          apiBaseUrl: data.apiBaseUrl || 'http://127.0.0.1:8000/api',
-          token:      data.token      || '',
-          roomId:     data.roomId     || 1,
-          prompt:     data.finalPrompt || data.prompt || 'Cinematic B-roll',
-          imageUrl:   data.imageUrl   || null,
+          apiBaseUrl,
+          token,
+          roomId,
+          prompt: finalPrompt,
+          imageUrl,
         });
 
         if (isMounted) {
