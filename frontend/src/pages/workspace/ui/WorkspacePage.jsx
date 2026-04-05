@@ -134,109 +134,50 @@ export const WorkspacePage = ({ sessionConfig }) => {
     []
   );
 
-  // ── Video Generation Logic (Step 1: Start, Step 2: Polling) ──────
-  const startVideoGeneration = async (roomId, prompt, imageUrl, targetNodeId) => {
-    const apiBaseUrl = sessionConfig?.apiBaseUrl || 'http://127.0.0.1:8000';
-    const token = sessionConfig?.token;
-
-    try {
-      console.log("Шаг 1: Запуск генерации (через platform API)...");
-      const startData = await generateRoomMedia({
-        apiBaseUrl,
-        token,
-        roomId,
-        prompt,
-        type: 'video',
-        imageUrl
-      });
-
-      const requestId = startData.request_id || startData.payload?.request_id;
-      if (!requestId) throw new Error("No request_id returned from Higgsfield");
-
-      console.log("Шаг 2: Начинаем Polling для request_id:", requestId);
-      
-      const pollInterval = setInterval(async () => {
-        try {
-          const statusData = await fetchGenerationStatus({
-            apiBaseUrl,
-            token,
-            roomId,
-            requestId
-          });
-          
-          const status = statusData.status || statusData.payload?.status;
-
-          if (status === 'completed') {
-            clearInterval(pollInterval);
-            const videoUrl = statusData.video?.url || statusData.payload?.video?.url;
-            console.log("Видео готово! Ссылка:", videoUrl);
-            
-            setNodes((nds) => nds.map((n) => n.id === targetNodeId ? { 
-              ...n, 
-              type: 'higgsfieldVideo', 
-              data: { ...n.data, video_url: videoUrl, isGeneratingMedia: false } 
-            } : n));
-          } else if (status === 'failed' || status === 'nsfw') {
-            clearInterval(pollInterval);
-            console.error("Ошибка генерации Higgsfield:", status);
-            setNodes((nds) => nds.map((n) => n.id === targetNodeId ? { ...n, data: { ...n.data, isGeneratingMedia: false } } : n));
-          } else {
-            console.log("Генерация в процессе. Полный ответ:", statusData);
-          }
-        } catch (pollErr) {
-          console.error("Ошибка при поллинге:", pollErr);
-        }
-      }, 4000);
-
-    } catch (error) {
-      console.error("Ошибка при старте генерации:", error);
-      setNodes((nds) => nds.map((n) => n.id === targetNodeId ? { ...n, data: { ...n.data, isGeneratingMedia: false } } : n));
-    }
-  };
 
   // onConnect: wires nodes + triggers Image-to-Video pipeline
   const onConnect = useCallback(
-    async (params) => {
-      const sourceNode = nodes.find((n) => n.id === params.source);
-      const targetNode = nodes.find((n) => n.id === params.target);
-
-      console.log("ONCONNECT TRIGGERED. Source:", sourceNode?.type, "Target:", targetNode?.type);
-
-      // Ищем ссылку на картинку в любых возможных полях
-      const imageUrl = sourceNode?.data?.image_url || sourceNode?.data?.url || sourceNode?.data?.image;
-
-      // Если есть картинка и есть куда её воткнуть - запускаем!
-      if (imageUrl && targetNode) {
-        console.log("Железобетонное условие выполнено! Запускаем Image-to-Video...");
-        
-        // 1. Рисуем стрелку
-        setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: '#d1fe17', strokeWidth: 1.5 } }, eds));
-        
-        // 2. Сразу меняем статус Target ноды на загрузку
-        setNodes((nds) => nds.map(n => n.id === targetNode.id ? { 
-          ...n, 
-          data: { ...n.data, isGeneratingMedia: true, status: 'generating' } 
-        } : n));
-        
-        // 3. Вызываем функцию генерации
-        startVideoGeneration(
-          roomId, 
-          targetNode.data?.content || targetNode.data?.prompt || "Animate this", 
-          imageUrl, 
-          targetNode.id
-        );
-        return; 
-      }
-
-      // Fallback for regular connections
+    (params) => {
+      // 1. Always create the edge
       setEdges((eds) =>
-        addEdge(
-          { ...params, animated: true, style: { stroke: '#d1fe17', strokeWidth: 1.5 } },
-          eds
-        )
+        addEdge({ ...params, animated: true, style: { stroke: '#d1fe17', strokeWidth: 1.5 } }, eds)
       );
+
+      // 2. Logic: Image -> Video Node (Loading state)
+      setNodes((nds) => {
+        const sourceNode = nds.find((n) => n.id === params.source);
+        const targetNode = nds.find((n) => n.id === params.target);
+
+        if (
+          sourceNode?.type?.startsWith('image') &&
+          targetNode?.type === 'higgsfieldVideo' &&
+          targetNode.data.status === 'waiting'
+        ) {
+          const imagePrompt = sourceNode.data.prompt || '';
+          const videoStylePrompt = targetNode.data.prompt || '';
+          const imageUrl = sourceNode.data.url || null;
+
+          return nds.map((node) =>
+            node.id === params.target
+              ? {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    status: 'loading',
+                    imageUrl,
+                    finalPrompt: imagePrompt && videoStylePrompt
+                      ? `${imagePrompt} with ${videoStylePrompt}`
+                      : imagePrompt || videoStylePrompt || 'Cinematic B-roll',
+                  },
+                }
+              : node
+          );
+        }
+
+        return nds;
+      });
     },
-    [nodes, setNodes, setEdges, sessionConfig, roomId]
+    [setNodes, setEdges]
   );
 
   // 1. Load room on mount
@@ -371,6 +312,12 @@ export const WorkspacePage = ({ sessionConfig }) => {
           const neatlyPlacedNodes = aiData.new_nodes.map((node, index) => ({
             ...node,
             position: { x: startX + index * 350, y: startY },
+            data: {
+              ...node.data,
+              token: sessionConfig?.token,
+              apiBaseUrl: sessionConfig?.apiBaseUrl,
+              roomId: roomId,
+            }
           }));
 
           return [...prev, ...neatlyPlacedNodes];

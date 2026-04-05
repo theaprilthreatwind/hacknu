@@ -18,6 +18,17 @@ export function HiggsfieldVideoNode({ id, data, selected }) {
   const { status = 'waiting', prompt, url, videoUrl, video_url } = data;
   const resolvedUrl = url || videoUrl || video_url;
   const [stylePrompt, setStylePrompt] = useState(data.prompt || '');
+  const [elapsedTime, setElapsedTime] = useState(0);
+
+  // Таймер для статуса loading
+  useEffect(() => {
+    if (status === 'loading') {
+      const interval = setInterval(() => setElapsedTime(prev => prev + 1), 1000);
+      return () => clearInterval(interval);
+    } else {
+      setElapsedTime(0);
+    }
+  }, [status]);
 
   // ── Fire generation only when status flips to 'loading' ──────────
   useEffect(() => {
@@ -133,9 +144,14 @@ export function HiggsfieldVideoNode({ id, data, selected }) {
               {/* Spinner */}
               <div className="w-8 h-8 border-2 border-h_accent/30 border-t-h_accent rounded-full animate-spin relative z-10" />
             </div>
-            <span className="text-xs text-h_accent animate-pulse font-medium tracking-wide">
-              Generating video…
-            </span>
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-xs text-h_accent animate-pulse font-medium tracking-wide">
+                Generating video…
+              </span>
+              <span className="text-[10px] text-h_accent/60 font-mono">
+                {Math.floor(elapsedTime / 60).toString().padStart(2, '0')}:{(elapsedTime % 60).toString().padStart(2, '0')}
+              </span>
+            </div>
           </div>
         )}
 

@@ -60,9 +60,12 @@ export const generateHiggsfieldImage = async ({ apiBaseUrl, token, roomId, promp
 
     const resultData = await pollTaskStatus(apiBaseUrl, token, roomId, startData.request_id);
 
-    if (!resultData.images?.[0]?.url) throw new Error('Completed but no image URL found');
+    // Извлекаем URL с учетом возможной обертки payload
+    const finalImageUrl = resultData?.payload?.images?.[0]?.url || resultData?.images?.[0]?.url;
 
-    return { url: resultData.images[0].url };
+    if (!finalImageUrl) throw new Error('Completed but no image URL found in response');
+
+    return { url: finalImageUrl };
   } catch (error) {
     console.error('❌ REAL IMAGE API FAILED:', error);
     throw error; // propagate → node renders 'error' state
@@ -91,9 +94,12 @@ export const generateHiggsfieldVideo = async ({ apiBaseUrl, token, roomId, promp
 
     const resultData = await pollTaskStatus(apiBaseUrl, token, roomId, startData.request_id);
 
-    if (!resultData.video?.url) throw new Error('Completed but no video URL found');
+    // Извлекаем URL с учетом возможной обертки payload
+    const finalVideoUrl = resultData?.payload?.video?.url || resultData?.video?.url;
 
-    return { url: resultData.video.url };
+    if (!finalVideoUrl) throw new Error('Completed but no video URL found in response');
+
+    return { url: finalVideoUrl };
   } catch (error) {
     console.error('❌ REAL VIDEO API FAILED:', error);
     throw error; // propagate → node renders 'error' state
