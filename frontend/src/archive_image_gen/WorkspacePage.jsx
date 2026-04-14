@@ -16,7 +16,7 @@ const TOOLS = [
     label: 'Select',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M5 3l14 9-7 1-4 7-3-17z"/>
+        <path d="M5 3l14 9-7 1-4 7-3-17z" />
       </svg>
     ),
   },
@@ -25,7 +25,7 @@ const TOOLS = [
     label: 'Rectangle',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="3" width="18" height="18" rx="2"/>
+        <rect x="3" y="3" width="18" height="18" rx="2" />
       </svg>
     ),
   },
@@ -34,7 +34,7 @@ const TOOLS = [
     label: 'Circle',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <circle cx="12" cy="12" r="9"/>
+        <circle cx="12" cy="12" r="9" />
       </svg>
     ),
   },
@@ -43,7 +43,7 @@ const TOOLS = [
     label: 'Text',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-        <path d="M4 7V5h16v2"/><path d="M12 5v14"/><path d="M9 19h6"/>
+        <path d="M4 7V5h16v2" /><path d="M12 5v14" /><path d="M9 19h6" />
       </svg>
     ),
   },
@@ -52,9 +52,9 @@ const TOOLS = [
     label: 'Image',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="3" width="18" height="18" rx="2"/>
-        <circle cx="8.5" cy="8.5" r="1.5"/>
-        <path d="M21 15l-5-5L5 21"/>
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <circle cx="8.5" cy="8.5" r="1.5" />
+        <path d="M21 15l-5-5L5 21" />
       </svg>
     ),
   },
@@ -64,7 +64,7 @@ const TOOLS = [
     label: 'Generate',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
       </svg>
     ),
     accent: true,
@@ -90,8 +90,8 @@ const TopToolbar = ({ activeTool, onToolSelect }) => (
             isActive
               ? 'bg-h_accent/10 text-h_accent shadow-[0_0_12px_rgba(209,254,23,0.1)]'
               : isAccent
-              ? 'text-h_accent/70 hover:text-h_accent hover:bg-h_accent/10'
-              : 'text-neutral-400 hover:text-white hover:bg-white/5',
+                ? 'text-h_accent/70 hover:text-h_accent hover:bg-h_accent/10'
+                : 'text-neutral-400 hover:text-white hover:bg-white/5',
           ].join(' ')}
         >
           {tool.icon}
@@ -154,7 +154,7 @@ export const WorkspacePage = ({ sessionConfig }) => {
       if (!requestId) throw new Error("No request_id returned from Higgsfield");
 
       console.log("Шаг 2: Начинаем Polling для request_id:", requestId);
-      
+
       const pollInterval = setInterval(async () => {
         try {
           const statusData = await fetchGenerationStatus({
@@ -163,18 +163,18 @@ export const WorkspacePage = ({ sessionConfig }) => {
             roomId,
             requestId
           });
-          
+
           const status = statusData.status || statusData.payload?.status;
 
           if (status === 'completed') {
             clearInterval(pollInterval);
             const videoUrl = statusData.video?.url || statusData.payload?.video?.url;
             console.log("Видео готово! Ссылка:", videoUrl);
-            
-            setNodes((nds) => nds.map((n) => n.id === targetNodeId ? { 
-              ...n, 
-              type: 'higgsfieldVideo', 
-              data: { ...n.data, video_url: videoUrl, isGeneratingMedia: false } 
+
+            setNodes((nds) => nds.map((n) => n.id === targetNodeId ? {
+              ...n,
+              type: 'higgsfieldVideo',
+              data: { ...n.data, video_url: videoUrl, isGeneratingMedia: false }
             } : n));
           } else if (status === 'failed' || status === 'nsfw') {
             clearInterval(pollInterval);
@@ -208,24 +208,24 @@ export const WorkspacePage = ({ sessionConfig }) => {
       // Если есть картинка и есть куда её воткнуть - запускаем!
       if (imageUrl && targetNode) {
         console.log("Железобетонное условие выполнено! Запускаем Image-to-Video...");
-        
+
         // 1. Рисуем стрелку
         setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: '#d1fe17', strokeWidth: 1.5 } }, eds));
-        
+
         // 2. Сразу меняем статус Target ноды на загрузку
-        setNodes((nds) => nds.map(n => n.id === targetNode.id ? { 
-          ...n, 
-          data: { ...n.data, isGeneratingMedia: true, status: 'generating' } 
+        setNodes((nds) => nds.map(n => n.id === targetNode.id ? {
+          ...n,
+          data: { ...n.data, isGeneratingMedia: true, status: 'generating' }
         } : n));
-        
+
         // 3. Вызываем функцию генерации
         startVideoGeneration(
-          roomId, 
-          targetNode.data?.content || targetNode.data?.prompt || "Animate this", 
-          imageUrl, 
+          roomId,
+          targetNode.data?.content || targetNode.data?.prompt || "Animate this",
+          imageUrl,
           targetNode.id
         );
-        return; 
+        return;
       }
 
       // Fallback for regular connections
@@ -408,7 +408,7 @@ export const WorkspacePage = ({ sessionConfig }) => {
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-h_accent flex items-center justify-center flex-shrink-0">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="#131313"/>
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="#131313" />
               </svg>
             </div>
             <span className="text-sm font-semibold text-h_text_primary tracking-tight">
@@ -436,8 +436,8 @@ export const WorkspacePage = ({ sessionConfig }) => {
           </p>
           <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-h_accent/10 border border-h_accent/20 cursor-pointer transition-all hover:bg-h_accent/15">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-h_accent flex-shrink-0">
-              <rect x="3" y="3" width="18" height="18" rx="2"/>
-              <path d="M3 9h18M9 21V9"/>
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <path d="M3 9h18M9 21V9" />
             </svg>
             <span className="text-sm text-h_accent font-medium truncate">Main board</span>
           </div>
@@ -446,18 +446,17 @@ export const WorkspacePage = ({ sessionConfig }) => {
         {/* Footer */}
         <div className="px-3 py-4 border-t border-[#2a2a2a] space-y-2">
           <div className="flex items-center gap-2 px-3 py-1.5">
-            <div className="w-2 h-2 rounded-full bg-h_accent animate-pulse shadow-[0_0_6px_rgba(209,254,23,0.7)]"/>
+            <div className="w-2 h-2 rounded-full bg-h_accent animate-pulse shadow-[0_0_6px_rgba(209,254,23,0.7)]" />
             <span className="text-xs text-h_text_secondary">
               Live · {Object.keys(remoteCursors).length + 1} online
             </span>
           </div>
           <button
             onClick={handleShareClick}
-            className={`w-full flex items-center justify-center gap-2 border py-2 px-4 rounded-xl text-xs font-semibold transition-all ${
-              isCopied 
-                ? 'bg-h_accent/20 border-h_accent text-h_accent' 
+            className={`w-full flex items-center justify-center gap-2 border py-2 px-4 rounded-xl text-xs font-semibold transition-all ${isCopied
+                ? 'bg-h_accent/20 border-h_accent text-h_accent'
                 : 'bg-h_accent/10 hover:bg-h_accent/20 border-h_accent/30 text-h_accent'
-            }`}
+              }`}
           >
             {isCopied ? (
               <>
@@ -469,9 +468,9 @@ export const WorkspacePage = ({ sessionConfig }) => {
             ) : (
               <>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
-                  <polyline points="16 6 12 2 8 6"/>
-                  <line x1="12" y1="2" x2="12" y2="15"/>
+                  <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                  <polyline points="16 6 12 2 8 6" />
+                  <line x1="12" y1="2" x2="12" y2="15" />
                 </svg>
                 Share link
               </>
